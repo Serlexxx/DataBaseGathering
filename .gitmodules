@@ -1,0 +1,3 @@
+[submodule "BasicOperationDBSqlite"]
+	path = BasicOperationDBSqlite
+	url = https://github.com/Serlexxx/BasicOperationDBSqlite.git

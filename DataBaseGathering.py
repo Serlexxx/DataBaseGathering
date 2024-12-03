@@ -1,5 +1,4 @@
-# TODO: add submodule from https://github.com/Serlexxx/BasicOperationDBSqlite
-from db import DataBase
+from BasicOperationDBSqlite.db import DataBase
 
 
 class DataBaseGathering(DataBase):
