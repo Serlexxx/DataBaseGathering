@@ -1,9 +1,63 @@
 from BasicOperationDBSqlite.db import DataBase
+from random import randint
+from sys import maxsize
 
 
 class DataBaseGathering(DataBase):
     def __init__(self, ):
         super().__init__(name="BaseGathering.db")
+
+    def add_company(self, name):
+        company_hash = hex(hash((randint(0, maxsize), name)))[2:]
+        self.execute('''
+            INSERT INTO "Company" ("name", "company_hash")
+            VALUES (?, ?);
+        ''', (name, company_hash))
+        # TODO get last rowid
+        # return self.get_last_rowid()
+
+    def add_person(self, person_name, tg_tag):
+        self.execute('''
+            INSERT INTO "Person" ("person_name", "tg_tag")
+            VALUES (?, ?);
+        ''', (person_name, tg_tag))
+        # TODO get last rowid
+        # return self.get_last_rowid()
+
+    def add_gathering(self, date, location, company_id):
+        self.execute('''
+            INSERT INTO "Gathering" ("date", "location", "company_id")
+            VALUES (?, ?, ?);
+        ''', (date, location, company_id))
+        # TODO get last rowid
+        # return self.get_last_rowid()
+
+    def add_receipt_position(self, description, amount, gathering_id, payed_person_id, group_id):
+        self.execute('''
+            INSERT INTO "ReceiptPosition" ("description", "amount", "gathering_id", "payed_person_id", "group_id")
+            VALUES (?, ?, ?, ?, ?);
+        ''', (description, amount, gathering_id, payed_person_id, group_id))
+        # TODO get last rowid
+        # return self.get_last_rowid()
+
+    def add_person_to_company(self, company_id, person_id):
+        self.execute('''
+            INSERT INTO "CompanyPerson" ("company_id", "person_id")
+            VALUES (?, ?);
+        ''', (company_id, person_id))
+
+    def add_person_group(self, paid):
+        self.execute('''
+            INSERT INTO "PersonGroup" ("paid")
+            VALUES (?);
+        ''', (paid,))
+        return self.get_last_rowid()
+
+    def add_person_to_group(self, group_id, person_id):
+        self.execute('''
+            INSERT INTO "PersonGroupPerson" ("group_id", "person_id")
+            VALUES (?, ?);
+        ''', (group_id, person_id))
 
     def _initial_db(self):
         self.execute('''
