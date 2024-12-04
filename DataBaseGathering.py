@@ -17,7 +17,7 @@ class DataBaseGathering(DataBase):
 
     def find_company(self, company_hash):
         return self.execute_with_one_result('''
-            SELECT company_id, name FROM Company WHERE "company_hash" = ?;
+            SELECT "company_id", "name" FROM "Company" WHERE "company_hash" = ?;
         ''', (company_hash,))
 
     def add_person(self, person_name, tg_tag):
@@ -26,6 +26,24 @@ class DataBaseGathering(DataBase):
             VALUES (?, ?);
         ''', (person_name, tg_tag))
         return self.get_last_rowid()
+
+    def find_person(self, tg_tag):
+        return self.execute_with_one_result('''
+            SELECT "person_id" FROM "Person" WHERE "tg_tag" = ?;
+        ''', (tg_tag,))
+
+    def add_person_to_company(self, company_id, person_id):
+        self.execute('''
+            INSERT INTO "CompanyPerson" ("company_id", "person_id")
+            VALUES (?, ?);
+        ''', (company_id, person_id))
+
+    def add_person_and_link_to_company(self, company_id, person_name, tg_tag):
+        self.start_transaction()
+        person_id = self.add_person(person_name, tg_tag)
+        self.add_person_to_company(company_id, person_id)
+        self.end_transaction()
+        return person_id
 
     def add_gathering(self, date, location, company_id):
         self.execute('''
@@ -40,12 +58,6 @@ class DataBaseGathering(DataBase):
             VALUES (?, ?, ?, ?, ?);
         ''', (description, amount, gathering_id, payed_person_id, group_id))
         return self.get_last_rowid()
-
-    def add_person_to_company(self, company_id, person_id):
-        self.execute('''
-            INSERT INTO "CompanyPerson" ("company_id", "person_id")
-            VALUES (?, ?);
-        ''', (company_id, person_id))
 
     def add_person_group(self, paid):
         self.execute('''
