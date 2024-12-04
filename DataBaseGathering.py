@@ -5,16 +5,21 @@ from sys import maxsize
 
 class DataBaseGathering(DataBase):
     def __init__(self, ):
-        super().__init__(name="BaseGathering.db")
+        super().__init__(name="Gathering.db")
 
-    def add_company(self, name):
-        company_hash = hex(hash((randint(0, maxsize), name)))[2:]
+    def add_company(self, name, company_hash):
         self.execute('''
             INSERT INTO "Company" ("name", "company_hash")
             VALUES (?, ?);
         ''', (name, company_hash))
         # TODO get last rowid
         # return self.get_last_rowid()
+
+
+    def find_company(self, company_hash):
+        return self.execute_with_one_result('''
+            SELECT company_id, name FROM Company WHERE "company_hash" = ?;
+        ''', (company_hash,))
 
     def add_person(self, person_name, tg_tag):
         self.execute('''
