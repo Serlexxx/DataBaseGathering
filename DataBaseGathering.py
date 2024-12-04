@@ -12,8 +12,7 @@ class DataBaseGathering(DataBase):
             INSERT INTO "Company" ("name", "company_hash")
             VALUES (?, ?);
         ''', (name, company_hash))
-        # TODO get last rowid
-        # return self.get_last_rowid()
+        return self.get_last_rowid()
 
 
     def find_company(self, company_hash):
@@ -26,24 +25,21 @@ class DataBaseGathering(DataBase):
             INSERT INTO "Person" ("person_name", "tg_tag")
             VALUES (?, ?);
         ''', (person_name, tg_tag))
-        # TODO get last rowid
-        # return self.get_last_rowid()
+        return self.get_last_rowid()
 
     def add_gathering(self, date, location, company_id):
         self.execute('''
             INSERT INTO "Gathering" ("date", "location", "company_id")
             VALUES (?, ?, ?);
         ''', (date, location, company_id))
-        # TODO get last rowid
-        # return self.get_last_rowid()
+        return self.get_last_rowid()
 
     def add_receipt_position(self, description, amount, gathering_id, payed_person_id, group_id):
         self.execute('''
             INSERT INTO "ReceiptPosition" ("description", "amount", "gathering_id", "payed_person_id", "group_id")
             VALUES (?, ?, ?, ?, ?);
         ''', (description, amount, gathering_id, payed_person_id, group_id))
-        # TODO get last rowid
-        # return self.get_last_rowid()
+        return self.get_last_rowid()
 
     def add_person_to_company(self, company_id, person_id):
         self.execute('''
