@@ -11,18 +11,22 @@ db = DBG()
 
 
 def default_start_menu(choice, target_user):
-    if choice == "1":
+    if choice == 1:
         company_id = create_company(target_user)
-    elif choice == "2":
+    elif choice == 2:
         company_id = join_company(target_user)
-    elif choice == "0":
+    elif choice == 0:
         print("Выход из программы.")
         return None
     return company_id
 
 
+def default_input_choice():
+    return int(input("Выберите действие (введите номер): "))
+
 # Самое главное меню
 def menu_1(target_user):
+    ind_menu = 0
     companies = is_user_in_any_company(target_user)
     if not companies is None:
         for company in companies:
@@ -34,14 +38,15 @@ def menu_1(target_user):
     print(f"{ind_menu}. Присоедениться к компании")
     print("0. Выход")
 
-    choice = input("Выберите действие (введите номер): ")
+    choice = default_input_choice()
 
-    if not companies is None and choice > len(companies):
-        choice -= len(companies)
-    else:
-        return companies[choice]['company_id']
+    if not companies is None:
+        if choice > len(companies):
+            choice -= len(companies)
+        else:
+            return companies[choice]['company_id']
 
-    return default_start_menu(choice)
+    return default_start_menu(choice, target_user)
 
 # Выбрали компанию
 def menu_2(company_id):
@@ -51,19 +56,19 @@ def menu_2(company_id):
     print("4. Редактировать мероприятие")
     print("0. Выход")
 
-    choice = input("Выберите действие (введите номер): ")
+    choice = default_input_choice()
 
-    if choice == "1":
+    if choice == 1:
         add_user_in_company(company_id, None)
-    elif choice == "2":
+    elif choice == 2:
         get_all_user_in_company(company_id)
-    elif choice == "3":
+    elif choice == 3:
         # TODO menu_3 создания
         create_gathering(company_id)
-    # elif choice == "4":
+    # elif choice == 4:
         # TODO menu_4 редактирования
         # edit_gathering(company_id)
-    elif choice == "0":
+    elif choice == 0:
         print("Выход в главное меню.")
     else:
         print("Неверный выбор. Попробуйте снова.")
