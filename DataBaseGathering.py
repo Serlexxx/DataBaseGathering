@@ -27,7 +27,7 @@ class DataBaseGathering(DataBase):
         ''', (person_name, tg_tag))
         return self.get_last_rowid()
 
-    def find_person_in_bd(self, tg_tag):
+    def find_person(self, tg_tag):
         return self.execute_with_one_result('''
             SELECT "person_id" FROM "Person" WHERE "tg_tag" = ?;
         ''', (tg_tag,))

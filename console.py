@@ -118,7 +118,7 @@ def add_user_in_company(company_id, target_user):
         user_tag = target_user['tg_tag']
 
     print("\n--- Поиск user в бд ---")
-    user = db.find_person_in_bd(user_tag)
+    user = db.find_person(user_tag)
     if user is None:
         print("\n--- Не нашли, регистрируем user в бд ---")
         db.add_person_and_link_to_company(company_id, user_name, user_tag)
