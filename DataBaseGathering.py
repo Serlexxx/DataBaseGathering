@@ -50,8 +50,8 @@ class DataBaseGathering(DataBase):
 
         self.execute('''
             CREATE TABLE IF NOT EXISTS "CompanyPerson" (
-                "company_id"    INTEGER NOT NULL UNIQUE,
-                "person_id"     INTEGER NOT NULL UNIQUE,
+                "company_id"    INTEGER NOT NULL,
+                "person_id"     INTEGER NOT NULL,
                 PRIMARY KEY("person_id","company_id"),
                 FOREIGN KEY("person_id") REFERENCES "Person"("person_id"),
                 FOREIGN KEY("company_id") REFERENCES "Company"("company_id")
@@ -68,8 +68,8 @@ class DataBaseGathering(DataBase):
 
         self.execute('''
             CREATE TABLE IF NOT EXISTS "PersonGroupPerson" (
-                "group_id"  INTEGER NOT NULL UNIQUE,
-                "person_id" INTEGER NOT NULL UNIQUE,
+                "group_id"  INTEGER NOT NULL,
+                "person_id" INTEGER NOT NULL,
                 PRIMARY KEY("group_id","person_id"),
                 FOREIGN KEY("person_id") REFERENCES "Person"("person_id"),
                 FOREIGN KEY("group_id") REFERENCES "PersonGroup"("group_id")
