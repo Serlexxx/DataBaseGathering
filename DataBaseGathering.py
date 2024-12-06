@@ -3,7 +3,7 @@ from BasicOperationDBSqlite.db import DataBase
 
 class DataBaseGathering(DataBase):
     def __init__(self, ):
-        super().__init__(name="DataBaseGathering.db")
+        super().__init__(name="BaseGathering.db")
 
     def _initial_db(self):
         self.execute('''
