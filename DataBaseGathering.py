@@ -27,16 +27,32 @@ class DataBaseGathering(DataBase):
         ''', (person_name, tg_tag))
         return self.get_last_rowid()
 
-    def find_person(self, tg_tag):
+    def find_person_in_bd(self, tg_tag):
         return self.execute_with_one_result('''
             SELECT "person_id" FROM "Person" WHERE "tg_tag" = ?;
         ''', (tg_tag,))
+    
+    def find_person_in_any_company(self, person_id):
+        return self.execute_with_all_result('''
+            SELECT Company.company_id, Company.name
+            FROM Company
+            JOIN CompanyPerson ON Company.company_id = CompanyPerson.company_id
+            WHERE CompanyPerson.person_id = ?;
+        ''', (person_id,))
 
     def add_person_to_company(self, company_id, person_id):
         self.execute('''
-            INSERT INTO "CompanyPerson" ("company_id", "person_id")
+            INSERT OR REPLACE INTO "CompanyPerson" ("company_id", "person_id")
             VALUES (?, ?);
         ''', (company_id, person_id))
+    
+    def get_all_user_in_company(self, company_id):
+        return self.execute_with_all_result('''
+            SELECT Person.person_name, Person.tg_tag
+            FROM Person
+            JOIN CompanyPerson ON Person.person_id = CompanyPerson.person_id
+            WHERE CompanyPerson.company_id = ?;
+        ''', (company_id,))
 
     def add_person_and_link_to_company(self, company_id, person_name, tg_tag):
         self.start_transaction()
