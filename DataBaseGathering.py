@@ -14,7 +14,6 @@ class DataBaseGathering(DataBase):
         ''', (name, company_hash))
         return self.get_last_rowid()
 
-
     def find_company(self, company_hash):
         return self.execute_with_one_result('''
             SELECT "company_id", "name" FROM "Company" WHERE "company_hash" = ?;
@@ -31,7 +30,7 @@ class DataBaseGathering(DataBase):
         return self.execute_with_one_result('''
             SELECT "person_id" FROM "Person" WHERE "tg_tag" = ?;
         ''', (tg_tag,))
-    
+
     def find_person_in_any_company(self, person_id):
         return self.execute_with_all_result('''
             SELECT Company.company_id, Company.name
@@ -45,11 +44,10 @@ class DataBaseGathering(DataBase):
             INSERT OR REPLACE INTO "CompanyPerson" ("company_id", "person_id")
             VALUES (?, ?);
         ''', (company_id, person_id))
-    
+
     def get_all_user_in_company(self, company_id):
         return self.execute_with_all_result('''
-            SELECT Person.person_name, Person.tg_tag
-            FROM Person
+            SELECT * FROM Person
             JOIN CompanyPerson ON Person.person_id = CompanyPerson.person_id
             WHERE CompanyPerson.company_id = ?;
         ''', (company_id,))
@@ -61,23 +59,23 @@ class DataBaseGathering(DataBase):
         self.end_transaction()
         return person_id
 
-    def add_gathering(self, date, location, company_id):
+    def add_gathering(self, date, name, company_id):
         self.execute('''
-            INSERT INTO "Gathering" ("date", "location", "company_id")
+            INSERT INTO "Gathering" ("date", "name", "company_id")
             VALUES (?, ?, ?);
-        ''', (date, location, company_id))
+        ''', (date, name, company_id))
         return self.get_last_rowid()
 
-    def add_receipt_position(self, description, amount, gathering_id, payed_person_id, group_id):
+    def add_receipt_position(self, gathering_id, payed_person_id, group_id, amount, description):
         self.execute('''
             INSERT INTO "ReceiptPosition" ("description", "amount", "gathering_id", "payed_person_id", "group_id")
             VALUES (?, ?, ?, ?, ?);
         ''', (description, amount, gathering_id, payed_person_id, group_id))
         return self.get_last_rowid()
 
-    def add_person_group(self, paid):
+    def add_paid_person_group(self, paid=False):
         self.execute('''
-            INSERT INTO "PersonGroup" ("paid")
+            INSERT OR REPLACE INTO "PersonGroup" ("paid")
             VALUES (?);
         ''', (paid,))
         return self.get_last_rowid()
@@ -122,7 +120,7 @@ class DataBaseGathering(DataBase):
             CREATE TABLE IF NOT EXISTS "ReceiptPosition" (
                 "receipt_position_id"   INTEGER NOT NULL UNIQUE,
                 "description"           TEXT,
-                "amount"                INTEGER NOT NULL,
+                "amount"                REAL NOT NULL,
                 "gathering_id"          INTEGER NOT NULL,
                 "payed_person_id"       INTEGER NOT NULL,
                 "group_id"              INTEGER NOT NULL,
