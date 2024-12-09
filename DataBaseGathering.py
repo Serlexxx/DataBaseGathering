@@ -65,6 +65,12 @@ class DataBaseGathering(DataBase):
             VALUES (?, ?, ?);
         ''', (date, name, company_id))
         return self.get_last_rowid()
+    
+    def get_last_n_gathering(self, company_id, cnt):
+        return self.execute_with_many_result('''
+            SELECT * FROM Gathering
+            WHERE company_id = ?;
+        ''', (company_id,), cnt)
 
     def add_receipt_position(self, gathering_id, payed_person_id, group_id, amount, description):
         self.execute('''
@@ -72,6 +78,13 @@ class DataBaseGathering(DataBase):
             VALUES (?, ?, ?, ?, ?);
         ''', (description, amount, gathering_id, payed_person_id, group_id))
         return self.get_last_rowid()
+
+    # TODO
+    def get_all_receipt_positions(self, gathering_id):
+        return self.execute_with_many_result('''
+            SELECT * FROM ReceiptPosition
+            WHERE gathering_id = ?;
+        ''', (gathering_id,))
 
     def add_paid_person_group(self, paid=False):
         self.execute('''
