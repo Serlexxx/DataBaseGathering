@@ -69,9 +69,8 @@ def menu_2(company_id):
     elif choice == 3:
         # TODO menu_3 создания
         create_gathering(company_id)
-    # elif choice == 4:
-    # TODO menu_4 редактирования
-    # edit_gathering(company_id)
+    elif choice == 4:
+        edit_gathering(company_id)
     # elif choice == 5:
     # TODO menu_5 вывод списка мероприятий
     # edit_gathering(company_id)
@@ -257,6 +256,35 @@ def create_gathering(company_id):
         )
     db.end_transaction()
 
+
+def edit_gathering(company_id):
+    ind = 0
+    
+    # Выбор мероприятия
+    gatherings = db.get_last_n_gathering(company_id, 5)
+    for gath in gatherings:
+        ind += 1
+        print(f"{ind}. {gath['name']} ({gath['date']})")
+    choice_gath = int(input("Выберите мероприятие: (0 - назад): "))
+    if choice_gath == 0:
+        return
+
+    db.get_all_receipt_positions(company_id, gatherings[choice_gath - 1]['gathering_id'])
+    receipt_positions = adding_receipt_positions(company_id, gatherings[choice_gath - 1]['gathering_id'])
+
+    # TODO добавление позиций или атомарное мероприятие и позиции в методе
+    db.start_transaction()
+    for position in receipt_positions:
+        for person in position['group']:
+            db.add_person_to_group(position['group_id'], person)
+        db.add_receipt_position(
+            position['gathering_id'],
+            position['payed_person_id'],
+            position['group_id'],
+            position['amount'],
+            position['description']
+        )
+    db.end_transaction()
 
 if __name__ == "__main__":
     main_menu()
