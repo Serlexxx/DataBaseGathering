@@ -22,8 +22,8 @@ def default_start_menu(choice, target_user):
     return company_id
 
 
-def default_input_choice():
-    return int(input("Выберите действие (введите номер): "))
+def default_input_choice(string_0, string_1):
+    return int(input(f"{string_0} ({string_1}): "))
 
 
 # Самое главное меню
@@ -34,13 +34,9 @@ def menu_1(target_user):
         for company in companies:
             ind_menu += 1
             print(f"{ind_menu}. Компания '{company['name']}'")
-    ind_menu += 1
-    print(f"{ind_menu}. Создать компанию")
-    ind_menu += 1
-    print(f"{ind_menu}. Присоедениться к компании")
-    print("0. Выход")
 
-    choice = default_input_choice()
+    choice = default_input_choice("Выберите действие", f"0 - выход; {ind_menu + 1} - создать компанию; "
+                                    f"{ind_menu + 2} - присоедениться к компании")
 
     if not companies is None:
         if choice > len(companies):
@@ -58,9 +54,8 @@ def menu_2(company_id):
     print("3. Создать мероприятие")
     print("4. Редактировать мероприятие")
     print("5. Показать список мероприятий")
-    print("0. Выход")
 
-    choice = default_input_choice()
+    choice = default_input_choice("Выберите действие", "0 - в главное меню")
 
     if choice == 1:
         add_user_in_company(company_id, None)
@@ -182,12 +177,12 @@ def adding_receipt_positions(company_id, gathering_id):
         ind = 0
 
         # TODO Добавить проверку, что это int > 0
-        choice_payed_person_id = int(input("Кто платил за позицию: ")) - 1
+        choice_payed_person_id = default_input_choice("Кто платил за позицию: ", ">0") - 1
         payed_person_id = users[choice_payed_person_id]['person_id']
 
         # Собираем кто заказывал эту позицию
         while True:
-            choice_person = int(input("Кто заказывал?: (0 - закончить, -1 - общак): "))
+            choice_person = default_input_choice("Кто заказывал?", "0 - закончить; -1 - общак")
             if choice_person == 0:
                 break
             if choice_person == -1:
@@ -265,7 +260,7 @@ def edit_gathering(company_id):
     for gath in gatherings:
         ind += 1
         print(f"{ind}. {gath['name']} ({gath['date']})")
-    choice_gath = int(input("Выберите мероприятие: (0 - назад): "))
+    choice_gath = default_input_choice("Выберите мероприятие", "0 - назад")
     if choice_gath == 0:
         return
 
