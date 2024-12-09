@@ -35,8 +35,10 @@ def menu_1(target_user):
             ind_menu += 1
             print(f"{ind_menu}. Компания '{company['name']}'")
 
-    choice = default_input_choice("Выберите действие", f"0 - выход; {ind_menu + 1} - создать компанию; "
-                                    f"{ind_menu + 2} - присоедениться к компании")
+    choice = default_input_choice(f"{ind_menu + 1}. Создать компанию\n"
+                                  f"{ind_menu + 2}. Присоедениться к компании\n"
+                                  f"Выберите действие",
+                                  "0 - выход")
 
     if not companies is None:
         if choice > len(companies):
@@ -101,8 +103,10 @@ def create_company(target_user):
 
 def authorization_user():
     print("\n--- Авторизация user ---")
-    user_name = input("Введите имя: ")
-    user_tag = input("Введите tg tag: ")
+    # user_name = input("Введите имя: ")
+    # user_tag = input("Введите tg tag: ")
+    user_name = "Serlex"
+    user_tag = "@Serlex"
     print("\n--- Поиск user в бд ---")
     user = db.find_person(user_tag)
     return {'person_id': None, 'person_name': user_name, 'tg_tag': user_tag} if user is None else user
@@ -157,6 +161,7 @@ def join_company(target_user):
 
 
 def adding_receipt_positions(company_id, gathering_id):
+    global group_id
     print("\n--- Заполняем чеки ---")
     ind = 0
     receipt_positions = []
@@ -167,7 +172,7 @@ def adding_receipt_positions(company_id, gathering_id):
 
     while True:
         group = []
-        description = input("Введите позицию чека: ")
+        description = input("Введите название позицию чека: ")
         # TODO Добавить проверку, что это float
         amount = input("Введите цену позиции чека: ")
 
@@ -182,7 +187,7 @@ def adding_receipt_positions(company_id, gathering_id):
 
         # Собираем кто заказывал эту позицию
         while True:
-            choice_person = default_input_choice("Кто заказывал?", "0 - закончить; -1 - общак")
+            choice_person = default_input_choice("Кто заказывал?", "-1 - общак; 0 - закончить")
             if choice_person == 0:
                 break
             if choice_person == -1:
@@ -263,23 +268,54 @@ def edit_gathering(company_id):
     choice_gath = default_input_choice("Выберите мероприятие", "0 - назад")
     if choice_gath == 0:
         return
+    elif choice_gath > len(gatherings):
+        print("Invalid imput value")
+        return
+    receipt_positions = db.get_all_receipt_positions(gatherings[choice_gath - 1]['gathering_id'])
+    ind = 0
+    for receipt in receipt_positions:
+        ind += 1
+        # Получаем
+        # {receipt['gathering_id']}
+        # {receipt['description']}
+        # {receipt['amount']}
+        # {receipt['payed_person_id']}
+        # {receipt['group_id']}
+        # {receipt['person_name']}
+        # {receipt['tg_tag']}
+        # {receipt['payer_name']}
+        # {receipt['payer_tg_tag']}
+        # {receipt['paid']}
+        # TODO оплачено ли, кто платил, кто заказывал(все люди)
+        print(f"{ind}. {receipt['description']:<30} - "
+              f"{receipt['amount']} РУБ "
+              f"[заказывал - {receipt['person_name']}({receipt['tg_tag']})] "
+              f"[платил - {receipt['payer_name']}({receipt['payer_tg_tag']})] "
+              f"({'ОПЛАЧЕНО' if receipt['paid'] != 0 else 'НЕОПЛАЧЕНО'})")
+    choice_receipt = default_input_choice(f"{ind + 1}. Добавить позиции\n"
+                                          f"Выберите позицию чека",
+                                          "0 - назад")
+    if choice_receipt == 0:
+        return
+    elif choice_receipt == ind + 1:
+        receipt_positions = adding_receipt_positions(company_id, gatherings[choice_gath - 1]['gathering_id'])
 
-    db.get_all_receipt_positions(company_id, gatherings[choice_gath - 1]['gathering_id'])
-    receipt_positions = adding_receipt_positions(company_id, gatherings[choice_gath - 1]['gathering_id'])
-
-    # TODO добавление позиций или атомарное мероприятие и позиции в методе
-    db.start_transaction()
-    for position in receipt_positions:
-        for person in position['group']:
-            db.add_person_to_group(position['group_id'], person)
-        db.add_receipt_position(
-            position['gathering_id'],
-            position['payed_person_id'],
-            position['group_id'],
-            position['amount'],
-            position['description']
-        )
-    db.end_transaction()
+        # TODO добавление позиций или атомарное мероприятие и позиции в методе
+        db.start_transaction()
+        for position in receipt_positions:
+            for person in position['group']:
+                db.add_person_to_group(position['group_id'], person)
+            db.add_receipt_position(
+                position['gathering_id'],
+                position['payed_person_id'],
+                position['group_id'],
+                position['amount'],
+                position['description']
+            )
+        db.end_transaction()
+    else:
+        # TODO edit receipt_position
+        pass
 
 if __name__ == "__main__":
     main_menu()

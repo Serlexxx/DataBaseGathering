@@ -81,9 +81,32 @@ class DataBaseGathering(DataBase):
 
     # TODO
     def get_all_receipt_positions(self, gathering_id):
-        return self.execute_with_many_result('''
-            SELECT * FROM ReceiptPosition
-            WHERE gathering_id = ?;
+        return self.execute_with_all_result('''
+            SELECT 
+                r.gathering_id,
+                r.payed_person_id,
+                r.description,
+                r.amount,
+                pgp.group_id,
+                p.person_name,
+                p.tg_tag,
+                payer.person_name AS payer_name,
+                payer.tg_tag AS payer_tg_tag,
+                rg.paid
+            FROM 
+                ReceiptPosition r
+            JOIN 
+                PersonGroupPerson pgp ON pgp.group_id = r.group_id
+            JOIN 
+                Person p ON pgp.person_id = p.person_id
+            LEFT JOIN 
+                Person payer ON r.payed_person_id = payer.person_id
+            JOIN 
+                PersonGroup rg ON rg.group_id = r.group_id
+            WHERE
+                r.gathering_id = ?
+            ORDER BY 
+                r.gathering_id, p.person_name;
         ''', (gathering_id,))
 
     def add_paid_person_group(self, paid=False):
