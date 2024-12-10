@@ -118,7 +118,7 @@ class DataBaseGathering(DataBase):
 
     def add_person_to_group(self, group_id, person_id):
         self.execute('''
-            INSERT INTO "PersonGroupPerson" ("group_id", "person_id")
+            INSERT OR REPLACE INTO "PersonGroupPerson" ("group_id", "person_id")
             VALUES (?, ?);
         ''', (group_id, person_id))
 

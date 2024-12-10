@@ -23,7 +23,13 @@ def default_start_menu(choice, target_user):
 
 
 def default_input_choice(string_0, string_1):
-    return int(input(f"{string_0} ({string_1}): "))
+    ret = None
+    while ret is None:
+        try:
+            ret = int(input(f"{string_0} ({string_1}): "))
+        except:
+            print("Invalid input value")
+    return ret
 
 
 # Самое главное меню
@@ -195,12 +201,15 @@ def adding_receipt_positions(company_id, gathering_id):
                     group.append(user['person_id'])
                 break
             group.append(users[choice_person - 1]['person_id'])
+        groups.append(group)
 
         already_have = False
         for gr in groups:
             if Counter(gr) == Counter(group):
-                group_id = receipt_positions[groups.index(gr)]['group_id']
-                already_have = True
+                if receipt_positions:
+                    # TODO получать id групп из бд для этого мероприятия
+                    group_id = receipt_positions[groups.index(gr)]['group_id']
+                    already_have = True
                 break
         if already_have is False:
             group_id = db.add_paid_person_group()
