@@ -108,7 +108,10 @@ def main_menu():
             company_id = menu_1(target_user)
         if company_id is None:
             break
-        company_id = menu_2(company_id)
+        elif company_id == 0:
+            company_id = None
+        else:
+            company_id = menu_2(company_id)
 
 
 def create_company(target_user):
@@ -129,7 +132,7 @@ def authorization_user():
     user_tag = "@Serlex"
     print("\n--- Поиск user в бд ---")
     user = db.find_person(user_tag)
-    return {'person_id': None, 'person_name': user_name, 'tg_tag': user_tag} if user is None else user
+    return {'person_id': None, 'tg_tag': user_tag} if user is None else user
 
 
 def is_user_in_any_company(user):
@@ -152,7 +155,7 @@ def add_user_in_company(company_id, target_user):
     user = db.find_person(user_tag)
     if user is None:
         print("\n--- Не нашли, регистрируем user в бд ---")
-        db.add_person_and_link_to_company(company_id, user_name, user_tag)
+        db.add_person_and_link_to_company(company_id, user_tag)
     else:
         print("\n--- Нашли, присоеденили ---")
         db.add_person_to_company(company_id, user['person_id'])
@@ -162,7 +165,7 @@ def get_all_user_in_company(company_id):
     ind = 0
     for user in db.get_all_user_in_company(company_id):
         ind += 1
-        print(f"{ind}. {user['person_name']} ({user['tg_tag']})")
+        print(f"{ind}. ({user['tg_tag']})")
     print("\n")
 
 
@@ -180,12 +183,33 @@ def join_company(target_user):
         return company['company_id']
 
 
-def adding_receipt_positions(company_id, gathering_id):
+def get_array_selected_person(company_id, array, string):
+    ind = 0
+    users = db.get_all_user_in_company(company_id)
+
+    for user in users:
+        ind += 1
+        print(f"{ind}. {user['tg_tag']}")
+    while True:
+        choice_person = default_input_choice(string, "-1 - все; 0 - закончить")
+        if choice_person == 0:
+            break
+        if choice_person == -1:
+            for user in users:
+                array.append(user['person_id'])
+            break
+        if choice_person - 1 <= len(users) and not users[choice_person - 1]['person_id'] in array:
+            array.append(users[choice_person - 1]['person_id'])
+
+    return array
+
+
+def adding_receipt_positions(company_id, gathering_id, who_was):
     global group_id
     print("\n--- Заполняем чеки ---")
     ind = 0
     receipt_positions = []
-    groups = []
+    groups = [who_was]
 
     # Получаем всех людей для формирования групп и выбора кто платил за позицию в чеке
     users = db.get_all_user_in_company(company_id)
@@ -204,18 +228,6 @@ def adding_receipt_positions(company_id, gathering_id):
         # TODO Добавить проверку, что это int > 0
         choice_payed_person_id = default_input_choice("Кто платил за позицию: ", ">0") - 1
         payed_person_id = users[choice_payed_person_id]['person_id']
-
-        # Собираем кто заказывал эту позицию
-        while True:
-            choice_person = default_input_choice("Кто заказывал?", "-1 - общак; 0 - закончить")
-            if choice_person == 0:
-                break
-            if choice_person == -1:
-                for user in users:
-                    group.append(user['person_id'])
-                break
-            group.append(users[choice_person - 1]['person_id'])
-        groups.append(group)
 
         already_have = False
         for gr in groups:
@@ -248,7 +260,7 @@ def adding_receipt_positions(company_id, gathering_id):
 
 def create_gathering(company_id):
     print("\n--- Создаем мероприятие ---")
-    ind = 0
+    who_was = []
     date = datetime.date.today().isoformat()
     # Собираем данные, а потом только записываем позиции в бд
 
@@ -262,7 +274,9 @@ def create_gathering(company_id):
     locate = default_while_not_true_input("Введите название места",
                                           lambda value: value is not None and value.strip() != "")
     gathering_id = db.add_gathering(date, locate, company_id)
-    receipt_positions = adding_receipt_positions(company_id, gathering_id)
+    
+    who_was = get_array_selected_person(company_id, who_was, "Кто был?")
+    receipt_positions = adding_receipt_positions(company_id, gathering_id, who_was)
 
     # TODO добавление позиций или атомарное мероприятие и позиции в методе
     db.start_transaction()
