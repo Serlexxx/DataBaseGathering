@@ -32,6 +32,20 @@ def default_input_choice(string_0, string_1):
     return ret
 
 
+def default_while_not_true_input(string, condition):
+    while True:
+        get_value = input(f"{string}: ")
+        try:
+            if condition(get_value):
+                break
+            else:
+                print("Sorry not sorry\n")
+        except:
+            print("Sorry not sorry\n")
+    return get_value
+
+
+
 # Самое главное меню
 def menu_1(target_user):
     ind_menu = 0
@@ -99,7 +113,8 @@ def main_menu():
 
 def create_company(target_user):
     print("\n--- Добавление компании ---")
-    name = input("Введите название компании: ")
+    name = default_while_not_true_input("Введите название компании", 
+                                        lambda value: value is not None and value.strip() != "")
     hex_company = hex(hash((randint(0, maxsize), name)))[2:]
     last_row = db.add_company(name, hex_company)
     print(f"Компания '{name}' добавлена.\nОтправьте hash своим друзьям: '{hex_company}'\n")
@@ -109,9 +124,8 @@ def create_company(target_user):
 
 def authorization_user():
     print("\n--- Авторизация user ---")
-    # user_name = input("Введите имя: ")
-    # user_tag = input("Введите tg tag: ")
-    user_name = "Serlex"
+    # user_tag = default_while_not_true_input("Введите tg tag",
+    #                                         lambda value: value is not None and value.strip() != "")
     user_tag = "@Serlex"
     print("\n--- Поиск user в бд ---")
     user = db.find_person(user_tag)
@@ -128,11 +142,10 @@ def is_user_in_any_company(user):
 def add_user_in_company(company_id, target_user):
     if target_user is None:
         # Добавляем другого человека
-        user_name = input("Введите имя: ")
-        user_tag = input("Введите tg tag: ")
+        user_tag = default_while_not_true_input("Введите tg tag",
+                                                lambda value: value is not None and value.strip() != "")
     else:
         # Добавлем себя в созданную компанию или куда присоеденились
-        user_name = target_user['person_name']
         user_tag = target_user['tg_tag']
 
     print("\n--- Поиск user в бд ---")
@@ -155,7 +168,8 @@ def get_all_user_in_company(company_id):
 
 def join_company(target_user):
     print("\n--- Поиск компании ---")
-    hex_company = input("Введите hash компании: ")
+    hex_company = default_while_not_true_input("Введите hash компании",
+                                                lambda value: value is not None and value.strip() != "")
     company = db.find_company(hex_company)
     if company is None:
         print(f"Компания с таким hash '{hex_company}' не существует. Попробуйте снова\n")
@@ -178,14 +192,14 @@ def adding_receipt_positions(company_id, gathering_id):
 
     while True:
         group = []
-        description = input("Введите название позицию чека: ")
+        description = default_while_not_true_input("Введите название позицию чека", 
+                                                   lambda value: value is not None and value.strip() != "")
         # TODO Добавить проверку, что это float
-        amount = input("Введите цену позиции чека: ")
+        amount = default_while_not_true_input("Введите цену позиции чека", 
+                                                   lambda value: float(value))
 
-        for user in users:
-            ind += 1
-            print(f"{ind}. {user['person_name']} ({user['tg_tag']})")
-        ind = 0
+        # Собираем кто заказывал эту позицию
+        group = get_array_selected_person(company_id, group, "Кто заказывал?")
 
         # TODO Добавить проверку, что это int > 0
         choice_payed_person_id = default_input_choice("Кто платил за позицию: ", ">0") - 1
@@ -224,7 +238,8 @@ def adding_receipt_positions(company_id, gathering_id):
                 'group': group
             }
         )
-        continue_input = input("Хотите добавить еще одну позицию? (Да/Нет): ").strip().lower()
+        continue_input = default_while_not_true_input("Хотите добавить еще одну позицию? (Да/Нет)",
+                                                      lambda value: value is not None and value.strip() != "").strip().lower()
         if continue_input != 'да':
             break
 
@@ -238,16 +253,14 @@ def create_gathering(company_id):
     # Собираем данные, а потом только записываем позиции в бд
 
     # inline ввод Да/Нет в боте
-    today = input("Мероприятие было сегодня?(Да/Нет): ").strip().lower()
+    today = default_while_not_true_input("Мероприятие было сегодня?(Да/Нет)",
+                                         lambda value: value is not None and value.strip() != "").strip().lower()
     if today == "нет":
-        while True:
-            date = input("Введите дату в формате YYYY-MM-DD: ")
-            if re.match(date_regex, date):
-                break
-            else:
-                print("Sorry not sorry\n")
+        date = default_while_not_true_input("Введите дату в формате YYYY-MM-DD",
+                                            lambda value: re.match(date_regex, value))
 
-    locate = input("Введите название места: ")
+    locate = default_while_not_true_input("Введите название места",
+                                          lambda value: value is not None and value.strip() != "")
     gathering_id = db.add_gathering(date, locate, company_id)
     receipt_positions = adding_receipt_positions(company_id, gathering_id)
 
