@@ -19,11 +19,10 @@ class DataBaseGathering(DataBase):
             SELECT "company_id", "name" FROM "Company" WHERE "company_hash" = ?;
         ''', (company_hash,))
 
-    def add_person(self, person_name, tg_tag):
+    def add_person(self, tg_tag):
         self.execute('''
-            INSERT INTO "Person" ("person_name", "tg_tag")
-            VALUES (?, ?);
-        ''', (person_name, tg_tag))
+            INSERT INTO "Person" ("tg_tag") VALUES (?);
+        ''', (tg_tag,))
         return self.get_last_rowid()
 
     def find_person(self, tg_tag):
@@ -52,9 +51,9 @@ class DataBaseGathering(DataBase):
             WHERE CompanyPerson.company_id = ?;
         ''', (company_id,))
 
-    def add_person_and_link_to_company(self, company_id, person_name, tg_tag):
+    def add_person_and_link_to_company(self, company_id, tg_tag):
         self.start_transaction()
-        person_id = self.add_person(person_name, tg_tag)
+        person_id = self.add_person(tg_tag)
         self.add_person_to_company(company_id, person_id)
         self.end_transaction()
         return person_id
@@ -154,7 +153,7 @@ class DataBaseGathering(DataBase):
         # Вспомогательная таблица
         self.execute('''
             CREATE TABLE IF NOT EXISTS "CompanyPerson" (
-                "company_id"    INTEGER NOT NULL UNIQUE,
+                "company_id"    INTEGER NOT NULL,
                 "person_id"     INTEGER NOT NULL,
                 PRIMARY KEY("person_id", "company_id"),
                 FOREIGN KEY("person_id")    REFERENCES "Person"("person_id"),
