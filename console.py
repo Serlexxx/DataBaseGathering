@@ -12,6 +12,7 @@ db = DBG()
 
 
 def default_start_menu(choice, target_user):
+    company_id = None
     if choice == 1:
         company_id = create_company(target_user)
     elif choice == 2:
@@ -32,9 +33,9 @@ def default_input_choice(string_0, string_1):
     return ret
 
 
-def default_while_not_true_input(string, condition):
+def default_while_not_true_input(string_0, string_1, condition):
     while True:
-        get_value = input(f"{string}: ")
+        get_value = input(f"{string_0} " + (f"({string_1}): " if string_1 else ": "))
         try:
             if condition(get_value):
                 break
@@ -43,7 +44,6 @@ def default_while_not_true_input(string, condition):
         except:
             print("Sorry not sorry\n")
     return get_value
-
 
 
 # Самое главное меню
@@ -55,11 +55,11 @@ def menu_1(target_user):
             ind_menu += 1
             print(f"{ind_menu}. Компания '{company['name']}'")
 
-    choice = default_input_choice(f"{ind_menu + 1}. Создать компанию\n"
-                                  f"{ind_menu + 2}. Присоедениться к компании\n"
-                                  f"Выберите действие",
-                                  "0 - выход")
-
+    choice = int(default_while_not_true_input(f"{ind_menu + 1}. Создать компанию\n"
+                                              f"{ind_menu + 2}. Присоедениться к компании\n"
+                                              f"Выберите действие",
+                                              "0 - выход",
+                                              lambda value: int(value) >= 0))
     if not companies is None:
         if choice > len(companies):
             choice -= len(companies)
@@ -77,7 +77,9 @@ def menu_2(company_id):
     print("4. Редактировать мероприятие")
     print("5. Показать список мероприятий")
 
-    choice = default_input_choice("Выберите действие", "0 - в главное меню")
+    choice = int(default_while_not_true_input("Выберите действие",
+                                              "0 - в главное меню",
+                                              lambda value: int(value) >= 0))
 
     if choice == 1:
         add_user_in_company(company_id, None)
@@ -116,7 +118,7 @@ def main_menu():
 
 def create_company(target_user):
     print("\n--- Добавление компании ---")
-    name = default_while_not_true_input("Введите название компании", 
+    name = default_while_not_true_input("Введите название компании", None,
                                         lambda value: value is not None and value.strip() != "")
     hex_company = hex(hash((randint(0, maxsize), name)))[2:]
     last_row = db.add_company(name, hex_company)
@@ -127,7 +129,7 @@ def create_company(target_user):
 
 def authorization_user():
     print("\n--- Авторизация user ---")
-    # user_tag = default_while_not_true_input("Введите tg tag",
+    # user_tag = default_while_not_true_input("Введите tg tag", None,
     #                                         lambda value: value is not None and value.strip() != "")
     user_tag = "@Serlex"
     print("\n--- Поиск user в бд ---")
@@ -145,7 +147,7 @@ def is_user_in_any_company(user):
 def add_user_in_company(company_id, target_user):
     if target_user is None:
         # Добавляем другого человека
-        user_tag = default_while_not_true_input("Введите tg tag",
+        user_tag = default_while_not_true_input("Введите tg tag", None,
                                                 lambda value: value is not None and value.strip() != "")
     else:
         # Добавлем себя в созданную компанию или куда присоеденились
@@ -171,8 +173,8 @@ def get_all_user_in_company(company_id):
 
 def join_company(target_user):
     print("\n--- Поиск компании ---")
-    hex_company = default_while_not_true_input("Введите hash компании",
-                                                lambda value: value is not None and value.strip() != "")
+    hex_company = default_while_not_true_input("Введите hash компании", None,
+                                               lambda value: value is not None and value.strip() != "")
     company = db.find_company(hex_company)
     if company is None:
         print(f"Компания с таким hash '{hex_company}' не существует. Попробуйте снова\n")
@@ -265,13 +267,13 @@ def create_gathering(company_id):
     # Собираем данные, а потом только записываем позиции в бд
 
     # inline ввод Да/Нет в боте
-    today = default_while_not_true_input("Мероприятие было сегодня?(Да/Нет)",
+    today = default_while_not_true_input("Мероприятие было сегодня?", "Да/Нет",
                                          lambda value: value is not None and value.strip() != "").strip().lower()
     if today == "нет":
-        date = default_while_not_true_input("Введите дату в формате YYYY-MM-DD",
+        date = default_while_not_true_input("Введите дату", "YYYY-MM-DD",
                                             lambda value: re.match(date_regex, value))
 
-    locate = default_while_not_true_input("Введите название места",
+    locate = default_while_not_true_input("Введите название места", None,
                                           lambda value: value is not None and value.strip() != "")
     gathering_id = db.add_gathering(date, locate, company_id)
     
@@ -295,63 +297,68 @@ def create_gathering(company_id):
 
 def edit_gathering(company_id):
     ind = 0
-    
+    # TODO переписать под новую структуру БД
     # Выбор мероприятия
-    gatherings = db.get_last_n_gathering(company_id, 5)
-    for gath in gatherings:
-        ind += 1
-        print(f"{ind}. {gath['name']} ({gath['date']})")
-    choice_gath = default_input_choice("Выберите мероприятие", "0 - назад")
-    if choice_gath == 0:
-        return
-    elif choice_gath > len(gatherings):
-        print("Invalid imput value")
-        return
-    receipt_positions = db.get_all_receipt_positions(gatherings[choice_gath - 1]['gathering_id'])
-    ind = 0
-    for receipt in receipt_positions:
-        ind += 1
-        # Получаем
-        # {receipt['gathering_id']}
-        # {receipt['description']}
-        # {receipt['amount']}
-        # {receipt['payed_person_id']}
-        # {receipt['group_id']}
-        # {receipt['person_name']}
-        # {receipt['tg_tag']}
-        # {receipt['payer_name']}
-        # {receipt['payer_tg_tag']}
-        # {receipt['paid']}
-        # TODO оплачено ли, кто платил, кто заказывал(все люди)
-        print(f"{ind}. {receipt['description']:<30} - "
-              f"{receipt['amount']} РУБ "
-              f"[заказывал - {receipt['person_name']}({receipt['tg_tag']})] "
-              f"[платил - {receipt['payer_name']}({receipt['payer_tg_tag']})] "
-              f"({'ОПЛАЧЕНО' if receipt['paid'] != 0 else 'НЕОПЛАЧЕНО'})")
-    choice_receipt = default_input_choice(f"{ind + 1}. Добавить позиции\n"
-                                          f"Выберите позицию чека",
-                                          "0 - назад")
-    if choice_receipt == 0:
-        return
-    elif choice_receipt == ind + 1:
-        receipt_positions = adding_receipt_positions(company_id, gatherings[choice_gath - 1]['gathering_id'])
+    # gatherings = db.get_last_n_gathering(company_id, 5)
+    # if not gatherings:
+    #     print(f"Не было еще мероприятий\n")
+    #     return
+    # for gath in gatherings:
+    #     ind += 1
+    #     print(f"{ind}. {gath['name']} ({gath['date']})")
+    # choice_gath = int(default_while_not_true_input("Выберите мероприятие", "0 - назад", lambda value: int(value) >= 0))
+    # if choice_gath == 0:
+    #     return
+    # elif choice_gath > len(gatherings):
+    #     print("Invalid imput value")
+    #     return
+    # receipt_positions = db.get_all_receipt_positions(gatherings[choice_gath - 1]['gathering_id'])
+    # ind = 0
+    # for receipt in receipt_positions:
+    #     ind += 1
+    #     # Получаем
+    #     # {receipt['gathering_id']}
+    #     # {receipt['description']}
+    #     # {receipt['amount']}
+    #     # {receipt['payed_person_id']}
+    #     # {receipt['group_id']}
+    #     # {receipt['person_name']}
+    #     # {receipt['tg_tag']}
+    #     # {receipt['payer_name']}
+    #     # {receipt['payer_tg_tag']}
+    #     # {receipt['paid']}
+    #     # TODO оплачено ли, кто платил, кто заказывал(все люди)
+    #     print(f"{ind}. {receipt['description']:<30} - "
+    #           f"{receipt['amount']} РУБ "
+    #           f"[заказывал - {receipt['person_name']}({receipt['tg_tag']})] "
+    #           f"[платил - {receipt['payer_name']}({receipt['payer_tg_tag']})] "
+    #           f"({'ОПЛАЧЕНО' if receipt['paid'] != 0 else 'НЕОПЛАЧЕНО'})")
+    # choice_receipt = int(default_while_not_true_input(f"{ind + 1}. Добавить позиции\n"
+    #                                                   f"Выберите позицию чека",
+    #                                                   "0 - назад",
+    #                                                   lambda value: int(value) > 0))
+    # if choice_receipt == 0:
+    #     return
+    # elif choice_receipt == ind + 1:
+    #     receipt_positions = adding_receipt_positions(gatherings[choice_gath - 1]['gathering_id'])
+    #
+    #     # TODO добавление позиций или атомарное мероприятие и позиции в методе
+    #     db.start_transaction()
+    #     for position in receipt_positions:
+    #         for person in position['group']:
+    #             db.add_person_to_group(position['group_id'], person)
+    #         db.add_receipt_position(
+    #             position['gathering_id'],
+    #             position['payed_person_id'],
+    #             position['group_id'],
+    #             position['amount'],
+    #             position['description']
+    #         )
+    #     db.end_transaction()
+    # else:
+    #     # TODO edit receipt_position
+    #     pass
 
-        # TODO добавление позиций или атомарное мероприятие и позиции в методе
-        db.start_transaction()
-        for position in receipt_positions:
-            for person in position['group']:
-                db.add_person_to_group(position['group_id'], person)
-            db.add_receipt_position(
-                position['gathering_id'],
-                position['payed_person_id'],
-                position['group_id'],
-                position['amount'],
-                position['description']
-            )
-        db.end_transaction()
-    else:
-        # TODO edit receipt_position
-        pass
 
 if __name__ == "__main__":
     main_menu()
