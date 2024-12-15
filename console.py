@@ -185,84 +185,104 @@ def join_company(target_user):
         return company['company_id']
 
 
-def get_array_selected_person(company_id, array, string):
+def get_array_selected_person(array, original_array, string):
     ind = 0
-    users = db.get_all_user_in_company(company_id)
 
-    for user in users:
+    for user in original_array:
         ind += 1
         print(f"{ind}. {user['tg_tag']}")
     while True:
-        choice_person = default_input_choice(string, "-1 - все; 0 - закончить")
+        if len(array) == len(original_array):
+            print("Всех отметили")
+            break
+        choice_person = int(default_while_not_true_input(string,
+                                                         "-1 - все; 0 - закончить",
+                                                         lambda value: (-1 <= int(value) <= len(original_array))))
         if choice_person == 0:
+            if len(array) == 0:
+                print("Еще не выбрали никого\n")
+                continue
+            else:
+                break
+        elif choice_person == -1:
+            array = []
+            for user in original_array:
+                array.append(user)
             break
-        if choice_person == -1:
-            for user in users:
-                array.append(user['person_id'])
-            break
-        if choice_person - 1 <= len(users) and not users[choice_person - 1]['person_id'] in array:
-            array.append(users[choice_person - 1]['person_id'])
+        choice_person -= 1
+        if choice_person < len(original_array):
+            if not original_array[choice_person] in array:
+                array.append(original_array[choice_person])
+            else:
+                print(f"Уже отметили {original_array[choice_person]['tg_tag']}")
 
     return array
 
 
-def adding_receipt_positions(company_id, gathering_id, who_was):
+def adding_receipt_positions(who_was):
     global group_id
     print("\n--- Заполняем чеки ---")
-    ind = 0
-    receipt_positions = []
-    groups = [who_was]
-
-    # Получаем всех людей для формирования групп и выбора кто платил за позицию в чеке
-    users = db.get_all_user_in_company(company_id)
+    groups = []
 
     while True:
+        data_payment_status = []
         group = []
-        description = default_while_not_true_input("Введите название позицию чека", 
+
+        description = default_while_not_true_input("Введите название позицию чека", None,
                                                    lambda value: value is not None and value.strip() != "")
-        # TODO Добавить проверку, что это float
-        amount = default_while_not_true_input("Введите цену позиции чека", 
-                                                   lambda value: float(value))
-
+        amount = float(default_while_not_true_input("Введите цену позиции чека", None,
+                                                    lambda value: float(value)))
         # Собираем кто заказывал эту позицию
-        group = get_array_selected_person(company_id, group, "Кто заказывал?")
+        group = get_array_selected_person(group, who_was, "Кто заказывал?")
 
-        # TODO Добавить проверку, что это int > 0
-        choice_payed_person_id = default_input_choice("Кто платил за позицию: ", ">0") - 1
-        payed_person_id = users[choice_payed_person_id]['person_id']
+        choice_payed_person_id = int(default_while_not_true_input("Кто платил за позицию?", ">0",
+                                                                  lambda value: 0 < int(value) <= len(who_was))) - 1
+        payed_person_id = who_was[choice_payed_person_id]['person_id']
 
-        already_have = False
-        for gr in groups:
-            if Counter(gr) == Counter(group):
-                if receipt_positions:
-                    # TODO получать id групп из бд для этого мероприятия
-                    group_id = receipt_positions[groups.index(gr)]['group_id']
-                    already_have = True
-                break
-        if already_have is False:
-            group_id = db.add_paid_person_group()
-
-        receipt_positions.append(
-            {
-                'gathering_id': gathering_id,
+        for person in group:
+            data_payment_status.append(
+                {
+                    # Если платил я же, то ставим статус ОПЛАЧЕНО
+                    'is_paid': 1 if person['person_id'] == payed_person_id else 0,
+                    'person_id': person['person_id'],
+                }
+            )
+        data_receipt_positions = {
                 'description': description,
                 'payed_person_id': payed_person_id,
-                'group_id': group_id,
                 'amount': amount,
-                'group': group
+                'data_payment_status': data_payment_status,
             }
-        )
-        continue_input = default_while_not_true_input("Хотите добавить еще одну позицию? (Да/Нет)",
+
+        already_have = False
+        if groups:
+            for gr in groups:
+                if gr['group'] == group:
+                    print(gr['group'], group)
+                    gr['data_receipt_positions'].append(data_receipt_positions)
+                    already_have = True
+                    break
+        if already_have is False:
+            groups.append(
+                {
+                    'group': group,
+                    'count_person': len(group),
+                    'data_receipt_positions': [data_receipt_positions],
+                }
+            )
+
+        continue_input = default_while_not_true_input("Хотите добавить еще одну позицию?", "Да/Нет",
                                                       lambda value: value is not None and value.strip() != "").strip().lower()
         if continue_input != 'да':
             break
 
-    return receipt_positions
+    return groups
 
 
 def create_gathering(company_id):
     print("\n--- Создаем мероприятие ---")
     who_was = []
+    users = db.get_all_user_in_company(company_id)
     date = datetime.date.today().isoformat()
     # Собираем данные, а потом только записываем позиции в бд
 
@@ -275,23 +295,25 @@ def create_gathering(company_id):
 
     locate = default_while_not_true_input("Введите название места", None,
                                           lambda value: value is not None and value.strip() != "")
-    gathering_id = db.add_gathering(date, locate, company_id)
-    
-    who_was = get_array_selected_person(company_id, who_was, "Кто был?")
-    receipt_positions = adding_receipt_positions(company_id, gathering_id, who_was)
+
+    who_was = get_array_selected_person(who_was, users, "Кто был?")
+    group_receipt_positions = adding_receipt_positions(who_was)
 
     # TODO добавление позиций или атомарное мероприятие и позиции в методе
     db.start_transaction()
-    for position in receipt_positions:
-        for person in position['group']:
-            db.add_person_to_group(position['group_id'], person)
-        db.add_receipt_position(
-            position['gathering_id'],
-            position['payed_person_id'],
-            position['group_id'],
-            position['amount'],
-            position['description']
-        )
+    gathering_id = db.add_gathering(date, locate, company_id)
+    for group_data in group_receipt_positions:
+        new_group_id = db.add_person_group(group_data['count_person'])
+        for data_receipt in group_data['data_receipt_positions']:
+            receipt_position_id = db.add_receipt_position(
+                                        data_receipt['description'],
+                                        data_receipt['amount'],
+                                        gathering_id,
+                                        data_receipt['payed_person_id'],
+                                    )
+            for data_person in data_receipt['data_payment_status']:
+                payment_status_id = db.add_payment_status(data_person['person_id'], new_group_id, data_person['is_paid'])
+                db.add_receipt_person_status(receipt_position_id, payment_status_id)
     db.end_transaction()
 
 

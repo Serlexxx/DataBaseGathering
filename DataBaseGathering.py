@@ -1,6 +1,5 @@
 from BasicOperationDBSqlite.db import DataBase
-from random import randint
-from sys import maxsize
+
 
 
 class DataBaseGathering(DataBase):
@@ -71,82 +70,86 @@ class DataBaseGathering(DataBase):
             WHERE company_id = ?;
         ''', (company_id,), cnt)
 
-    def add_receipt_position(self, gathering_id, payed_person_id, group_id, amount, description):
+    def add_receipt_position(self, description, amount, gathering_id, payed_person_id):
         self.execute('''
-            INSERT INTO "ReceiptPosition" ("description", "amount", "gathering_id", "payed_person_id", "group_id")
-            VALUES (?, ?, ?, ?, ?);
-        ''', (description, amount, gathering_id, payed_person_id, group_id))
+            INSERT INTO "ReceiptPosition" ("description", "amount", "gathering_id", "payed_person_id")
+            VALUES (?, ?, ?, ?);
+        ''', (description, amount, gathering_id, payed_person_id))
         return self.get_last_rowid()
 
     # TODO
-    def get_all_receipt_positions(self, gathering_id):
-        return self.execute_with_all_result('''
-            SELECT 
-                r.gathering_id,
-                r.payed_person_id,
-                r.description,
-                r.amount,
-                pgp.group_id,
-                p.person_name,
-                p.tg_tag,
-                payer.person_name AS payer_name,
-                payer.tg_tag AS payer_tg_tag,
-                rg.paid
-            FROM 
-                ReceiptPosition r
-            JOIN 
-                PersonGroupPerson pgp ON pgp.group_id = r.group_id
-            JOIN 
-                Person p ON pgp.person_id = p.person_id
-            LEFT JOIN 
-                Person payer ON r.payed_person_id = payer.person_id
-            JOIN 
-                PersonGroup rg ON rg.group_id = r.group_id
-            WHERE
-                r.gathering_id = ?
-            ORDER BY 
-                r.gathering_id, p.person_name;
-        ''', (gathering_id,))
+    # def get_all_receipt_positions(self, gathering_id):
+    #     return self.execute_with_all_result('''
+    #         SELECT
+    #             r.gathering_id,
+    #             r.payed_person_id,
+    #             r.description,
+    #             r.amount,
+    #             pgp.group_id,
+    #             p.person_name,
+    #             p.tg_tag,
+    #             payer.person_name AS payer_name,
+    #             payer.tg_tag AS payer_tg_tag,
+    #             rg.paid
+    #         FROM
+    #             ReceiptPosition r
+    #         JOIN
+    #             PersonGroupPerson pgp ON pgp.group_id = r.group_id
+    #         JOIN
+    #             Person p ON pgp.person_id = p.person_id
+    #         LEFT JOIN
+    #             Person payer ON r.payed_person_id = payer.person_id
+    #         JOIN
+    #             PersonGroup rg ON rg.group_id = r.group_id
+    #         WHERE
+    #             r.gathering_id = ?
+    #         ORDER BY
+    #             r.gathering_id, p.person_name;
+    #     ''', (gathering_id,))
 
-    def add_paid_person_group(self, paid=False):
+    def add_person_group(self, count_person):
         self.execute('''
-            INSERT OR REPLACE INTO "PersonGroup" ("paid")
+            INSERT INTO "PersonGroup" ("count_person")
             VALUES (?);
-        ''', (paid,))
+        ''', (count_person,))
         return self.get_last_rowid()
 
-    def add_person_to_group(self, group_id, person_id):
+    def add_payment_status(self, person_id, group_id, is_paid=0):
         self.execute('''
-            INSERT OR REPLACE INTO "PersonGroupPerson" ("group_id", "person_id")
+            INSERT INTO "PaymentStatus" ("is_paid", "person_id", "group_id")
+            VALUES (?, ?, ?);
+        ''', (is_paid, person_id, group_id,))
+        return self.get_last_rowid()
+
+    def add_receipt_person_status(self, receipt_position_id, payment_status_id):
+        self.execute('''
+            INSERT INTO "ReceiptPersonStatus" ("receipt_position_id", "payment_status_id")
             VALUES (?, ?);
-        ''', (group_id, person_id))
+        ''', (receipt_position_id, payment_status_id,))
 
     def _initial_db(self):
         self.execute('''
             CREATE TABLE IF NOT EXISTS "Company" (
-                "company_id"    INTEGER NOT NULL UNIQUE,
+                "company_id"    INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
                 "name"          TEXT NOT NULL,
-                "company_hash"  TEXT NOT NULL UNIQUE,
-                PRIMARY KEY("company_id" AUTOINCREMENT)
+                "company_hash"  TEXT NOT NULL UNIQUE
             );
         ''', ())
 
         self.execute('''
             CREATE TABLE IF NOT EXISTS "Gathering" (
-                "gathering_id"  INTEGER NOT NULL UNIQUE,
+                "gathering_id"  INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
                 "date"          TEXT NOT NULL,
                 "name"          TEXT NOT NULL,
                 "company_id"    INTEGER NOT NULL,
-                FOREIGN KEY("company_id") REFERENCES "Company"("company_id"),
-                PRIMARY KEY("gathering_id" AUTOINCREMENT)
+                FOREIGN KEY("company_id") REFERENCES "Company"("company_id") ON DELETE CASCADE
             );
         ''', ())
 
         self.execute('''
             CREATE TABLE IF NOT EXISTS "Person" (
-                "person_id"     INTEGER NOT NULL UNIQUE,
-                "tg_tag"        TEXT NOT NULL,
-                PRIMARY KEY("person_id" AUTOINCREMENT)
+                "person_id"     INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
+                "tg_tag"        TEXT NOT NULL
             );
         ''', ())
 
@@ -156,42 +159,48 @@ class DataBaseGathering(DataBase):
                 "company_id"    INTEGER NOT NULL,
                 "person_id"     INTEGER NOT NULL,
                 PRIMARY KEY("person_id", "company_id"),
-                FOREIGN KEY("person_id")    REFERENCES "Person"("person_id"),
-                FOREIGN KEY("company_id")   REFERENCES "Company"("company_id")
+                FOREIGN KEY("person_id")    REFERENCES "Person"("person_id") ON DELETE CASCADE,
+                FOREIGN KEY("company_id")   REFERENCES "Company"("company_id") ON DELETE CASCADE
             );
         ''', ())
 
         self.execute('''
             CREATE TABLE IF NOT EXISTS "PersonGroup" (
-                "group_id"          INTEGER NOT NULL UNIQUE,
-                "count_person"      INTEGER NOT NULL,
-                PRIMARY KEY("group_id" AUTOINCREMENT)
+                "group_id"          INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
+                "count_person"      INTEGER NOT NULL
             );
         ''', ())
 
         self.execute('''
             CREATE TABLE IF NOT EXISTS "PaymentStatus" (
-                "payment_status_id"     INTEGER NOT NULL UNIQUE,
-                "is_paid"               BLOB NOT NULL,
-                "person_id"             INTEGER NOT NULL,
-                "group_id"              INTEGER NOT NULL,
-                FOREIGN KEY("person_id")    REFERENCES "Person"("person_id"),
-                FOREIGN KEY("group_id")     REFERENCES "PersonGroup"("group_id"),
-                PRIMARY KEY("payment_status_id" AUTOINCREMENT)
+                "payment_status_id" INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
+                "is_paid"           INTEGER NOT NULL DEFAULT 0,
+                "person_id"         INTEGER NOT NULL,
+                "group_id"          INTEGER NOT NULL,
+                FOREIGN KEY("person_id")    REFERENCES "Person"("person_id") ON DELETE CASCADE,
+                FOREIGN KEY("group_id")     REFERENCES "PersonGroup"("group_id") ON DELETE CASCADE
             );
         ''', ())
 
         self.execute('''
             CREATE TABLE IF NOT EXISTS "ReceiptPosition" (
-                "receipt_position_id"   INTEGER NOT NULL UNIQUE,
-                "description"           TEXT,
-                "amount"                REAL NOT NULL,
-                "gathering_id"          INTEGER NOT NULL,
-                "payed_person_id"       INTEGER NOT NULL,
-                "payment_status_id"     INTEGER NOT NULL,
-                FOREIGN KEY("payed_person_id") REFERENCES "Person"("person_id"),
-                FOREIGN KEY("payment_status_id") REFERENCES "PaymentStatus"("payment_status_id"),
-                PRIMARY KEY("receipt_position_id" AUTOINCREMENT)
+                "receipt_position_id" INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
+                "description"         TEXT,
+                "amount"              REAL NOT NULL,
+                "gathering_id"        INTEGER NOT NULL,
+                "payed_person_id"     INTEGER NOT NULL,
+                FOREIGN KEY("gathering_id")     REFERENCES "Gathering"("gathering_id") ON DELETE CASCADE,
+                FOREIGN KEY("payed_person_id")  REFERENCES "Person"("person_id") ON DELETE CASCADE
+            );
+        ''', ())
+
+        self.execute('''
+            CREATE TABLE IF NOT EXISTS "ReceiptPersonStatus" (
+                "receipt_position_id" INTEGER NOT NULL,
+                "payment_status_id"   INTEGER NOT NULL,
+                PRIMARY KEY("receipt_position_id", "payment_status_id"),
+                FOREIGN KEY("receipt_position_id")  REFERENCES "ReceiptPosition"("receipt_position_id") ON DELETE CASCADE,
+                FOREIGN KEY("payment_status_id")    REFERENCES "PaymentStatus"("payment_status_id") ON DELETE CASCADE
             );
         ''', ())
 
