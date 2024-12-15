@@ -86,13 +86,12 @@ def menu_2(company_id):
     elif choice == 2:
         get_all_user_in_company(company_id)
     elif choice == 3:
-        # TODO menu_3 создания
         create_gathering(company_id)
     elif choice == 4:
+        # TODO menu_5 вывод списка мероприятий
         edit_gathering(company_id)
-    # elif choice == 5:
-    # TODO menu_5 вывод списка мероприятий
-    # edit_gathering(company_id)
+    elif choice == 5:
+        show_gathreing(company_id)
     elif choice == 0:
         print("Выход в главное меню.")
         return None
@@ -380,6 +379,35 @@ def edit_gathering(company_id):
     # else:
     #     # TODO edit receipt_position
     #     pass
+
+
+def choise_gathering_from_n(company_id):
+    ind = 0
+    gatherings = db.get_last_n_gathering(company_id, 5)
+    if not gatherings:
+        print(f"Не было еще мероприятий\n")
+        return 0
+    for gath in gatherings:
+        ind += 1
+        print(f"{ind}. {gath['name']} ({gath['date']})")
+    choice_gath = int(default_while_not_true_input("Выберите мероприятие", "0 - назад", lambda value: 0 <= int(value) < len(gatherings)))
+    if choice_gath == 0:
+        return 0
+
+    return gatherings[choice_gath - 1]['gathering_id']
+
+
+def show_full_info(gathering_id):
+
+
+
+def show_gathreing(company_id):
+    print("\n--- Показываем мероприятия ---")
+    gathering_id = choise_gathering_from_n(company_id)
+    if gathering_id == 0:
+        return
+    show_full_info(gathering_id)
+
 
 
 if __name__ == "__main__":
