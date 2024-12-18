@@ -4,7 +4,7 @@ from random import randint
 from sys import maxsize
 import datetime
 import re
-from collections import Counter
+import pandas as pd
 
 date_regex = re.compile(r'\d{4}-\d{2}-\d{2}')
 
@@ -247,11 +247,11 @@ def adding_receipt_positions(who_was):
                 }
             )
         data_receipt_positions = {
-                'description': description,
-                'payed_person_id': payed_person_id,
-                'amount': amount,
-                'data_payment_status': data_payment_status,
-            }
+            'description': description,
+            'payed_person_id': payed_person_id,
+            'amount': amount,
+            'data_payment_status': data_payment_status,
+        }
 
         already_have = False
         if groups:
@@ -271,7 +271,8 @@ def adding_receipt_positions(who_was):
             )
 
         continue_input = default_while_not_true_input("Хотите добавить еще одну позицию?", "Да/Нет",
-                                                      lambda value: value is not None and value.strip() != "").strip().lower()
+                                                      lambda
+                                                          value: value is not None and value.strip() != "").strip().lower()
         if continue_input != 'да':
             break
 
@@ -305,13 +306,14 @@ def create_gathering(company_id):
         new_group_id = db.add_person_group(group_data['count_person'])
         for data_receipt in group_data['data_receipt_positions']:
             receipt_position_id = db.add_receipt_position(
-                                        data_receipt['description'],
-                                        data_receipt['amount'],
-                                        gathering_id,
-                                        data_receipt['payed_person_id'],
-                                    )
+                data_receipt['description'],
+                data_receipt['amount'],
+                gathering_id,
+                data_receipt['payed_person_id'],
+            )
             for data_person in data_receipt['data_payment_status']:
-                payment_status_id = db.add_payment_status(data_person['person_id'], new_group_id, data_person['is_paid'])
+                payment_status_id = db.add_payment_status(data_person['person_id'], new_group_id,
+                                                          data_person['is_paid'])
                 db.add_receipt_person_status(receipt_position_id, payment_status_id)
     db.end_transaction()
 
@@ -390,7 +392,8 @@ def choise_gathering_from_n(company_id):
     for gath in gatherings:
         ind += 1
         print(f"{ind}. {gath['name']} ({gath['date']})")
-    choice_gath = int(default_while_not_true_input("Выберите мероприятие", "0 - назад", lambda value: 0 <= int(value) < len(gatherings)))
+    choice_gath = int(default_while_not_true_input("Выберите мероприятие", "0 - назад",
+                                                   lambda value: 0 <= int(value) < len(gatherings)))
     if choice_gath == 0:
         return 0
 
@@ -398,7 +401,27 @@ def choise_gathering_from_n(company_id):
 
 
 def show_full_info(gathering_id):
+    receipt_positions = db.get_all_receipt_position(gathering_id)
 
+    result = []
+    for pos in receipt_positions:
+        payment_statuses = db.get_payment_status(pos['receipt_position_id'])
+
+        row = {
+            "Позиция": pos['description'],
+            "Цена": pos['amount'],
+            "Кто платил": pos['payed_tg_tag'],
+        }
+
+        for status in payment_statuses:
+            share = pos['amount'] / db.get_count_group(status['group_id'])['count_person']
+            user_col = status['tg_tag']
+            payment_status = "V" if status['is_paid'] else "X"
+            row[user_col] = f"{share:.2f} руб, {payment_status}"
+
+        result.append(row)
+
+    print(pd.DataFrame(result))
 
 
 def show_gathreing(company_id):

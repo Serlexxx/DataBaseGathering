@@ -77,35 +77,17 @@ class DataBaseGathering(DataBase):
         ''', (description, amount, gathering_id, payed_person_id))
         return self.get_last_rowid()
 
-    # TODO
-    # def get_all_receipt_positions(self, gathering_id):
-    #     return self.execute_with_all_result('''
-    #         SELECT
-    #             r.gathering_id,
-    #             r.payed_person_id,
-    #             r.description,
-    #             r.amount,
-    #             pgp.group_id,
-    #             p.person_name,
-    #             p.tg_tag,
-    #             payer.person_name AS payer_name,
-    #             payer.tg_tag AS payer_tg_tag,
-    #             rg.paid
-    #         FROM
-    #             ReceiptPosition r
-    #         JOIN
-    #             PersonGroupPerson pgp ON pgp.group_id = r.group_id
-    #         JOIN
-    #             Person p ON pgp.person_id = p.person_id
-    #         LEFT JOIN
-    #             Person payer ON r.payed_person_id = payer.person_id
-    #         JOIN
-    #             PersonGroup rg ON rg.group_id = r.group_id
-    #         WHERE
-    #             r.gathering_id = ?
-    #         ORDER BY
-    #             r.gathering_id, p.person_name;
-    #     ''', (gathering_id,))
+    def get_all_receipt_position(self, gathering_id):
+        return self.execute_with_all_result('''
+            SELECT 
+                rp.receipt_position_id AS receipt_position_id,
+                rp.description AS description,
+                rp.amount AS amount,
+                p.tg_tag AS payed_tg_tag
+            FROM ReceiptPosition rp
+            JOIN Person p ON rp.payed_person_id = p.person_id
+            WHERE  rp.gathering_id = (?);
+        ''', (gathering_id,))
 
     def add_person_group(self, count_person):
         self.execute('''
@@ -114,12 +96,30 @@ class DataBaseGathering(DataBase):
         ''', (count_person,))
         return self.get_last_rowid()
 
+    def get_count_group(self, group_id):
+        return self.execute_with_one_result('''
+            SELECT count_person FROM PersonGroup WHERE group_id = (?);
+        ''', (group_id,))
+
     def add_payment_status(self, person_id, group_id, is_paid=0):
         self.execute('''
             INSERT INTO "PaymentStatus" ("is_paid", "person_id", "group_id")
             VALUES (?, ?, ?);
         ''', (is_paid, person_id, group_id,))
         return self.get_last_rowid()
+
+    def get_payment_status(self, receipt_position_id):
+        return self.execute_with_all_result('''
+            SELECT 
+                rps.receipt_position_id,
+                ps.group_id,
+                ps.is_paid,
+                per.tg_tag
+            FROM ReceiptPersonStatus rps
+            JOIN PaymentStatus ps ON rps.payment_status_id = ps.payment_status_id
+            JOIN Person per ON ps.person_id = per.person_id
+            WHERE rps.receipt_position_id = (?);
+        ''', (receipt_position_id,))
 
     def add_receipt_person_status(self, receipt_position_id, payment_status_id):
         self.execute('''
